@@ -2,7 +2,6 @@ const morgan = require('morgan');
 const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
-// const cookieParser = require('express.')
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -18,19 +17,20 @@ const connection = mysql.createConnection(dbconfig);
 const app = express();
 
 const corsOptions = {
-  origin: 'http://143.248.196.35:3000',
+  // origin: 'http://143.248.196.35:3000',
+  // origin: 'http://192.249.29.198:3000/',
+  origin: 'http://localhost:3000',
+  // origin: 'https://43e2-192-249-29-198.ngrok.io',
   credentials: true,
 };
 
 app.set('port', process.env.PORT || 3001);
-
+app.set('view engine', 'ejs');
 app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser(process.env.COOKEY_SECRET_KEY));
-// app.set('trust porxy', 1);
-// app.use(express.cookieParser(process.env.COOKEY_SECRET_KEY));
 
 app.use('/todos', todosRouter);
 
@@ -57,7 +57,8 @@ app.get('/', verifyToken, (req, res) => {
   // res.json('Root page!');
 });
 
-app.get('/main', verifyToken, (req, res) => {
+app.get('/mainpage', verifyToken, (req, res) => {
+  console.log(req.headers);
   res.json({ message: 'main page' });
 });
 
@@ -81,10 +82,13 @@ app.post('/signin', async (req, res, next) => {
             username: User.username,
           };
           // console.log(User);
-          // const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '5s' });
-          const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '3h' });
+          const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '30d' });
           const refreshToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
-          return res.cookie('x_auth', { accessToken, refreshToken }, { signed: true }).send(accessToken);
+          return res.cookie(
+            'x_auth',
+            { accessToken, refreshToken },
+            { maxAge: 31536000, path: '/', domain: '192.249.29.198', sameSite: 'Lax' },
+          ).json({ message: 'success', accessToken });
         }
       }
     });
@@ -129,7 +133,7 @@ app.post('/signup', async (req, res, next) => {
 
 app.get('/refresh', (req, res) => {
   try {
-    const headers = req.cookies.x_auth;
+    const headers = req.signedCookies.x_auth;
     // console.log(headers.fresh)
     // console.log(headers);
     try {
@@ -149,8 +153,8 @@ app.get('/refresh', (req, res) => {
               username: User.username,
             };
             const freshRefreshToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
-            const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '3s' });
-            res.cookie('x_auth', { accessToken, freshRefreshToken }).redirect('/main');
+            const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '3d' });
+            res.cookie('x_auth', { accessToken, freshRefreshToken }, { signed: true }).redirect('/main');
           }
         });
       }
