@@ -16,4 +16,5 @@ module.exports = {
   user: 'admin',
   password: 'jungle_emit',
   database: 'emit_2',
+  multipleStatements: true,
 };
