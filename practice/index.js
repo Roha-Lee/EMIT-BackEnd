@@ -14,13 +14,15 @@ dotenv.config();
 const { verifyToken } = require('./routes/middleware');
 
 const connection = mysql.createConnection(dbconfig);
+// const jwt = require('./modules/jwt');
 const app = express();
 
 const corsOptions = {
   // origin: 'http://143.248.196.35:3000',
-  // origin: 'http://192.249.29.198:3000/',
+  // origin: 'http://192.249.29.209:3000/',
   origin: 'http://localhost:3000',
   // origin: 'https://43e2-192-249-29-198.ngrok.io',
+  // origin: '*',
   credentials: true,
 };
 
@@ -34,8 +36,13 @@ app.use(cookieParser(process.env.COOKEY_SECRET_KEY));
 
 app.use('/todos', todosRouter);
 
-app.get('/logout', (req, res) => {
-  res.clearCookie('x_auth').json({ logoutSuccess: true });
+app.get('/signout', verifyToken, (req, res) => {
+  const { userInfo } = req.decoded;
+  if (!userInfo) {
+    res.status(200).json({ message: 'No user info' });
+  }
+  connection.query(`UPDATE users SET token = null WHERE username = "${userInfo.username}";`);
+  res.clearCookie('x_auth').json({ message: 'success' });
 });
 
 app.get('/', verifyToken, (req, res) => {
@@ -63,6 +70,7 @@ app.get('/mainpage', verifyToken, (req, res) => {
 });
 
 app.post('/signin', async (req, res, next) => {
+  console.log(req.headers);
   const { username, password } = req.body;
   try {
     // console.log(req.body.id);
@@ -83,11 +91,12 @@ app.post('/signin', async (req, res, next) => {
           };
           // console.log(User);
           const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '30d' });
-          const refreshToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
+          await connection.query(`UPDATE users SET token = "${accessToken}" WHERE username = "${User.username}";`);
+          // const refreshToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
           return res.cookie(
             'x_auth',
-            { accessToken, refreshToken },
-            { maxAge: 31536000, path: '/', domain: '192.249.29.198', sameSite: 'Lax' },
+            { accessToken },
+            { maxAge: 31536000, path: '/', domain: 'localhost', sameSite: 'Lax', httpOnly: true },
           ).json({ message: 'success', accessToken });
         }
       }
@@ -123,7 +132,7 @@ app.post('/signup', async (req, res, next) => {
         nickname,
         email,
       ]);
-      res.json({ message: 'success' });
+      res.cookie('hi', 'hi').json({ message: 'success' });
     });
   } catch (error) {
     // console.error(error);
