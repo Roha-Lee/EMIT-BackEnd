@@ -9,6 +9,7 @@ const dotenv = require('dotenv');
 const dbconfig = require('./config/database');
 const todosRouter = require('./routes/todos');
 
+
 dotenv.config();
 
 const { verifyToken } = require('./routes/middleware');
@@ -19,15 +20,12 @@ const app = express();
 
 const corsOptions = {
   // origin: 'http://143.248.196.35:3000',
-  // origin: 'http://192.249.29.209:3000/',
   origin: 'http://localhost:3000',
-  // origin: 'https://43e2-192-249-29-198.ngrok.io',
   // origin: '*',
   credentials: true,
 };
 
 app.set('port', process.env.PORT || 3001);
-app.set('view engine', 'ejs');
 app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
@@ -49,17 +47,17 @@ app.get('/', verifyToken, (req, res) => {
   const { userInfo } = req.decoded;
   // console.log(userInfo);
   if (!userInfo) {
-    res.status(200).json({ message: 'No user info' });
+    res.json({ message: 'No token' });
   }
   try {
-    connection.query(`SELECT id, username FROM users WHERE username = "${userInfo.username}";`, async (error, row) => {
+    connection.query(`SELECT token FROM users WHERE username = "${userInfo.username}";`, async (error, row) => {
       if (row) {
-        res.redirect('/main');
-        // res.json({ message: 'User Logged in' });
+        // res.redirect('/main');
+        res.status(200).json({ message: 'success' });
       }
     });
   } catch (error) {
-    res.status(200).json({ message: 'Fail to find user' });
+    res.json({ message: 'Fail to find user' });
   }
   // res.json('Root page!');
 });
@@ -172,6 +170,19 @@ app.get('/refresh', (req, res) => {
     // console.log(error)
     res.json({ message: 'fail to get cookies', error });
   }
+});
+
+app.use((req, res, next) => {
+  const error = new Error(`${req.method} ${req.url} 라우터가 없습니다.`);
+  error.status = 404;
+  next(error);
+});
+
+app.use((err, req, res, next) => {
+  res.locals.message = err.message;
+  res.locals.error = process.env.NODE_ENV !== 'production' ? err : {};
+  res.status(err.status || 500);
+  res.render('error');
 });
 
 app.listen(app.get('port'), () => {
