@@ -8,21 +8,22 @@ const router = express.Router();
 const connection = mysql.createConnection(dbconfig);
 
 router.get('/daily', verifyToken, (req, res) => {
-  // const { userInfo } = req.decoded;
+  const { userInfo } = req.decoded;
   const { today } = req.body;
   try {
-    const sql = `SELECT study_durations.subject_id, 
-    study_durations.start_time, 
-    study_durations.updated_at, 
-    subjects.name,
-    colors.code 
-    FROM study_durations 
-    JOIN subjects 
-    ON study_durations.subject_id = subjects.id
-    JOIN colors 
-    ON colors.id = subjects.color_code_id 
-    WHERE study_durations.start_time >= STR_TO_DATE("${today}", "%Y-%m-%d") 
-    AND study_durations.updated_at < DATE_ADD(STR_TO_DATE("${today}", "%Y-%m-%d"), INTERVAL 1 day);`;
+    const sql = `SELECT sd.subject_id, 
+      sd.start_time, 
+      sd.updated_at, 
+      s.name,
+      c.code 
+      FROM study_durations AS sd
+      JOIN subjects AS s 
+      ON sd.subject_id = s.id
+      JOIN colors AS c
+      ON c.id = s.color_code_id 
+      WHERE sd.user_id = ${parseInt(userInfo.id, 10)}
+      AND (date_format(sd.updated_at, "%Y-%m-%d") = STR_TO_DATE("${today}", "%Y-%m-%d") 
+      OR date_format(sd.start_time, "%Y-%m-%d") = STR_TO_DATE("${today}", "%Y-%m-%d"));`;
     connection.query(sql, (err, row) => {
       if (err) throw err;
       const studyTimeSummary = row.map((item) => {
