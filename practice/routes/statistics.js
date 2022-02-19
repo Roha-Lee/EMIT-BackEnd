@@ -17,9 +17,10 @@ router.get('/statistics', verifyToken, (req, res) => {
     study_durations.start_time, 
     study_durations.updated_at, 
     study_durations.user_id, 
-    subjects.color_code
+    colors.color_code
     FROM study_durations
     JOIN subjects
+    JOIN colors
     ON subjects.user_id = "${userInfo.id}"
     WHERE study_duration.start_time > ${today}
     AND study_duration.update_at < ${today};`;
