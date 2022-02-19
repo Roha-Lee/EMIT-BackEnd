@@ -15,6 +15,6 @@ module.exports = {
   port: '3306',
   user: 'admin',
   password: 'jungle_emit',
-  database: 'emit_2',
+  database: 'emit',
   multipleStatements: true,
 };
