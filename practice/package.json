@@ -6,28 +6,21 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start:node": "node app",
-    "start": "nodemon --watch /index.js"
+    "start": "nodemon --watch practice/ /index.js"
   },
   "author": "neng",
   "license": "MIT",
   "dependencies": {
     "bcrypt": "^5.0.1",
-    "body-parser": "^1.19.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
     "express": "^4.17.2",
     "express-jwt": "^6.1.0",
-    "express-mysql-session": "^2.1.7",
-    "express-session": "^1.17.2",
     "jsonwebtoken": "^8.5.1",
     "morgan": "^1.10.0",
     "mysql": "^2.18.1",
-    "mysql2": "^2.3.3",
-    "passport": "^0.5.2",
-    "passport-jwt": "^4.0.0",
-    "passport-local": "^1.0.0",
-    "session-file-store": "^1.5.0"
+    "mysql2": "^2.3.3"
   },
   "devDependencies": {
     "nodemon": "^2.0.15",
