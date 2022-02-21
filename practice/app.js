@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const dbconfig = require('./config/database');
 const todosRouter = require('./routes/todos');
+const statisticsRouter = require('./routes/statistics');
 const authRouter = require('./routes/auth');
 
 dotenv.config();
@@ -31,7 +32,12 @@ app.use(express.json());
 app.use(cookieParser(process.env.COOKEY_SECRET_KEY));
 
 app.use('/todos', todosRouter);
+app.use('/statistics', statisticsRouter);
 app.use('/auth', authRouter);
+
+app.get('/logout', (req, res) => {
+  res.clearCookie('x_auth').json({ logoutSuccess: true });
+});
 
 app.get('/', verifyToken, (req, res) => {
   const { userInfo } = req.decoded;

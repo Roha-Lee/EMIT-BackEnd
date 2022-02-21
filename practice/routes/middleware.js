@@ -36,7 +36,7 @@ exports.verifyToken = (req, res, next) => {
     // req.decoded = jwt.verify(req.headers.authorization, process.env.JWT_SECRET_KEY);
     req.decoded = jwt.verify(req.cookies.x_auth.accessToken, process.env.JWT_SECRET_KEY );
     // console.log(req.fresh.cookies.x_auth.accessToken);
-    console.log(req.decoded);
+    // console.log(req.decoded);
     return next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
