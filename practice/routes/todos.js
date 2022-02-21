@@ -6,14 +6,19 @@ const { verifyToken } = require('./middleware');
 const connection = mysql.createConnection(dbconfig);
 const router = express.Router();
 
-router.post('/', verifyToken, (req, res) => {
-  console.log(req.decoded, 1);
-  console.log(req.body, 1);
+// router.post('/', verifyToken, (req, res) => {
+router.post('/', (req, res) => {
+  // console.log(req.decoded, 1);
+  // console.log(req.body, 1);
   const { content, subjectId } = req.body;
-  const { userInfo } = req.decoded;
-  console.log(typeof parseInt(subjectId, 10));
+  // const { userInfo } = req.decoded;
+  // console.log(typeof parseInt(subjectId, 10));
+  if (content?.length === 0 || content === undefined) {
+    return res.json({ error: 'empty content field' });
+  }
   try {
-    const insertsql = `INSERT INTO todos(content, subject_id, user_id) VALUES("${content}", ${parseInt(subjectId, 10)}, ${userInfo.id})`;
+    const insertsql = `INSERT INTO todos(content, subject_id, user_id) VALUES("${content}", ${parseInt(subjectId, 10)}, ${parseInt(1, 10)})`;
+    // const insertsql = `INSERT INTO todos(content, subject_id, user_id) VALUES("${content}", ${parseInt(subjectId, 10)}, ${userInfo.id})`;
     connection.query(insertsql, (insertErr, result, fields) => {
       console.log(result);
       if (insertErr) throw insertErr;
@@ -21,9 +26,10 @@ router.post('/', verifyToken, (req, res) => {
         todo: {
           id: result.insertId,
           content,
-          subjectId: parseInt(subjectId, 10),
-          userId: userInfo.id,
-          isDone: false,
+          subject_id: parseInt(subjectId, 10),
+          // userId: userInfo.id,
+          user_id: 1,
+          is_done: false,
         },
       });
     });
