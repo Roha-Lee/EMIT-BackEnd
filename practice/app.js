@@ -8,9 +8,12 @@ const dbconfig = require('./config/database');
 const todosRouter = require('./routes/todos');
 const statisticsRouter = require('./routes/statistics');
 const authRouter = require('./routes/auth');
+const pageRouter = require('./routes/page')
+// const fs = require('fs');
 
 dotenv.config();
 
+// const { v4: uuidV4 } = require('uuid');
 const { verifyToken } = require('./routes/middleware');
 
 const connection = mysql.createConnection(dbconfig);
@@ -18,22 +21,30 @@ const connection = mysql.createConnection(dbconfig);
 const app = express();
 
 const corsOptions = {
-  // origin: 'http://143.248.196.35:3000',
-  origin: 'http://localhost:3000',
-  // origin: '*',
+  origin: '*',
   credentials: true,
 };
 
-app.set('port', process.env.PORT || 5000);
+app.set('port', process.env.PORT || 3001);
 app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser(process.env.COOKEY_SECRET_KEY));
 
+app.use('/', pageRouter);
 app.use('/todos', todosRouter);
 app.use('/statistics', statisticsRouter);
 app.use('/auth', authRouter);
+
+app.set('view engine', 'ejs');
+app.engine('html', require('ejs').renderFile);
+
+// const options = { // letsencrypt로 받은 인증서 경로를 입력
+//   ca: fs.readFileSync('/etc/letsencrypt/live/mait.shop/fullchain.pem'),
+//   key: fs.readFileSync('/etc/letsencrypt/live/mait.shop/privkey.pem'),
+//   cert: fs.readFileSync('/etc/letsencrypt/live/mait.shop/cert.pem')
+//   };
 
 app.get('/logout', (req, res) => {
   res.clearCookie('x_auth').json({ logoutSuccess: true });

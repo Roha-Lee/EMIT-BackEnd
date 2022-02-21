@@ -1,29 +1,44 @@
 {
-  "name": "practice",
+  "name": "mait",
   "version": "0.0.1",
-  "description": "",
-  "main": "index.js",
+  "description": "aitimer",
+  "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start:node": "node app",
-    "start": "nodemon --watch practice/ /index.js"
+    "start": "nodemon --watch practice/ /app.js"
   },
-  "author": "neng",
+  "author": "team3mit",
   "license": "MIT",
   "dependencies": {
     "bcrypt": "^5.0.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
+    "ejs": "^3.1.6",
     "express": "^4.17.2",
     "express-jwt": "^6.1.0",
+    "http": "^0.0.1-security",
+    "https": "^1.0.0",
     "jsonwebtoken": "^8.5.1",
     "morgan": "^1.10.0",
     "mysql": "^2.18.1",
-    "mysql2": "^2.3.3"
+    "mysql2": "^2.3.3",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.15",
     "rimraf": "^3.0.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Roha-Lee/EMIT-BackEnd.git"
+  },
+  "keywords": [
+    "ai"
+  ],
+  "bugs": {
+    "url": "https://github.com/Roha-Lee/EMIT-BackEnd/issues"
+  },
+  "homepage": "https://github.com/Roha-Lee/EMIT-BackEnd#readme"
 }

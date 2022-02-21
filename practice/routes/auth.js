@@ -1,9 +1,10 @@
 const express = require('express');
 const mysql = require('mysql');
-
-const connection = mysql.createConnection();
-const router = express.Router();
 const bcrypt = require('bcrypt');
+const dbconfig = require('../config/database');
+
+const router = express.Router();
+const connection = mysql.createConnection(dbconfig);
 const jwt = require('../modules/jwt');
 const { verifyToken } = require('./middleware');
 
@@ -147,3 +148,5 @@ router.get('/refresh', (req, res) => {
 //     res.json({ message: 'failed to login' });
 //   }
 // });
+
+module.exports = router;
