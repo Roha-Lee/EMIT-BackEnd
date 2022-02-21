@@ -5,12 +5,19 @@ const connection = mysql.createConnection();
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('../modules/jwt');
+const { verifyToken } = require('./middleware');
 
-router.get('/logout', (req, res) => {
-  res.clearCookie('x_auth').json({ logoutSuccess: true });
+router.get('/signout', verifyToken, (req, res) => {
+  const { userInfo } = req.decoded;
+  if (!userInfo) {
+    res.status(200).json({ message: 'No user info' });
+  }
+  connection.query(`UPDATE users SET token = null WHERE username = "${userInfo.username}";`);
+  res.clearCookie('x_auth').json({ message: 'success' });
 });
 
-router.post('/signin', async (req, res) => {
+router.post('/signin', async (req, res, next) => {
+  console.log(req.headers);
   const { username, password } = req.body;
   try {
     // console.log(req.body.id);
@@ -25,14 +32,24 @@ router.post('/signin', async (req, res) => {
         if (!result) {
           res.json({ message: 'Invalid password' });
         } else {
-          const jwtToken = jwt.sign(User);
-          await connection.query(`INSERT INTO users (token) VALUES (${jwtToken.refreshToken});`);
-          res.status(200).json({ statusCode: 200, message: 'success', token: (await jwtToken).accessToken });
+          const userInfo = {
+            id: User.id,
+            username: User.username,
+          };
+          // console.log(User);
+          const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '30d' });
+          await connection.query(`UPDATE users SET token = "${accessToken}" WHERE username = "${User.username}";`);
+          // const refreshToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
+          return res.cookie(
+            'x_auth',
+            { accessToken },
+            { maxAge: 31536000, path: '/', domain: 'localhost', sameSite: 'Lax', httpOnly: true },
+          ).json({ message: 'success', accessToken });
         }
       }
     });
   } catch (e) {
-    res.json({ message: 'failed to login' });
+    next();
   }
 });
 
@@ -104,3 +121,29 @@ router.get('/refresh', (req, res) => {
     res.json({ message: 'fail to get cookies', error });
   }
 });
+
+// router.post('/signin', async (req, res) => {
+//   const { username, password } = req.body;
+//   try {
+//     // console.log(req.body.id);
+//     await connection.query(`SELECT * FROM users WHERE username = "${username}";`, async (error, row) => {
+//       if (error) throw error;
+//       // console.log(row);
+//       const User = row.shift();
+//       if (User === undefined) {
+//         res.json({ message: 'Invalid id' });
+//       } else {
+//         const result = await bcrypt.compare(password, User.password);
+//         if (!result) {
+//           res.json({ message: 'Invalid password' });
+//         } else {
+//           const jwtToken = jwt.sign(User);
+//           await connection.query(`INSERT INTO users (token) VALUES (${jwtToken.refreshToken});`);
+//           res.status(200).json({ statusCode: 200, message: 'success', token: (await jwtToken).accessToken });
+//         }
+//       }
+//     });
+//   } catch (e) {
+//     res.json({ message: 'failed to login' });
+//   }
+// });
