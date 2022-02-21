@@ -17,10 +17,7 @@ const connection = mysql.createConnection(dbconfig);
 const app = express();
 
 const corsOptions = {
-  // origin: 'http://143.248.196.35:3000',
-  // origin: 'http://192.249.29.198:3000/',
-  origin: 'http://localhost:3000',
-  // origin: 'https://43e2-192-249-29-198.ngrok.io',
+  origin: '*',
   credentials: true,
 };
 
