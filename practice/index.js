@@ -8,6 +8,8 @@ const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const dbconfig = require('./config/database');
 const todosRouter = require('./routes/todos');
+const statisticsRouter = require('./routes/statistics');
+const authRouter = require('./routes/auth');
 
 dotenv.config();
 
@@ -33,6 +35,8 @@ app.use(express.json());
 app.use(cookieParser(process.env.COOKEY_SECRET_KEY));
 
 app.use('/todos', todosRouter);
+app.use('/statistics', statisticsRouter);
+app.use('/auth', authRouter);
 
 app.get('/logout', (req, res) => {
   res.clearCookie('x_auth').json({ logoutSuccess: true });
@@ -62,7 +66,17 @@ app.get('/mainpage', verifyToken, (req, res) => {
   res.json({ message: 'main page' });
 });
 
+app.get('/signout', verifyToken, (req, res) => {
+  const { userInfo } = req.decoded;
+  if (!userInfo) {
+    res.status(200).json({ message: 'No user info' });
+  }
+  connection.query(`UPDATE users SET token = null WHERE username = "${userInfo.username}";`);
+  res.clearCookie('x_auth').json({ message: 'success' });
+});
+
 app.post('/signin', async (req, res, next) => {
+  console.log(req.headers);
   const { username, password } = req.body;
   try {
     // console.log(req.body.id);
@@ -83,11 +97,12 @@ app.post('/signin', async (req, res, next) => {
           };
           // console.log(User);
           const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '30d' });
-          const refreshToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
+          await connection.query(`UPDATE users SET token = "${accessToken}" WHERE username = "${User.username}";`);
+          // const refreshToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
           return res.cookie(
             'x_auth',
-            { accessToken, refreshToken },
-            { maxAge: 31536000, path: '/', domain: '192.249.29.198', sameSite: 'Lax' },
+            { accessToken },
+            { maxAge: 31536000, path: '/', domain: 'localhost', sameSite: 'Lax', httpOnly: true },
           ).json({ message: 'success', accessToken });
         }
       }
