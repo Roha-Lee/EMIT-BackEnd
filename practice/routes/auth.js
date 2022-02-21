@@ -1,11 +1,12 @@
 const express = require('express');
 const mysql = require('mysql');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const dbconfig = require('../config/database');
 
 const router = express.Router();
 const connection = mysql.createConnection(dbconfig);
-const jwt = require('../modules/jwt');
+// const jwt = require('../modules/jwt');
 const { verifyToken } = require('./middleware');
 
 router.get('/signout', verifyToken, (req, res) => {

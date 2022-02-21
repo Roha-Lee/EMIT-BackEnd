@@ -24,17 +24,17 @@ router.get('/mainpage', (req, res) => {
                       t.is_done FROM todos AS t 
                   LEFT JOIN users AS u 
                       ON u.id = ${user_id};`
-  con.query(sql_1 + sql_2, function(err, result){
-      if(err) {
-          console.log("Error Execution :", err);
-          res.send("ERROR");
-          throw err;
-      };
-      con.end();
-      const results ={}
-      results.subjects = result[0].map((data) => {
-          const {id, name, color} = data;
-          let time = ((data["updated_at"]-data["start_time"])/1000);
+  con.query(sql_1 + sql_2, (err, result) => {
+    if (err) {
+      console.log("Error Execution :", err);
+      res.send("ERROR");
+      throw err;
+    };
+    con.end();
+    const results ={}
+    results.subjects = result[0].map((data) => {
+      const {id, name, color} = data;
+      let time = ((data["updated_at"]-data["start_time"])/1000);
           return {
               id,
               name,
@@ -76,9 +76,8 @@ router.get('/mainpage', (req, res) => {
   // con.end();
 });
 
-
 router.post('/subject', (req, res) => {
-  res.header("Access-Control-Allow-Origin", "*");
+  res.header('Access-Control-Allow-Origin', '*');
   const body = req.body;
   const user_id = 1; // 토큰에서 가져오기!
   const subject_name = body.subject; // request.get.body ?
@@ -86,37 +85,36 @@ router.post('/subject', (req, res) => {
   console.log(body);
 
   if (color_code == "") {
-      res.status(401).send( {message: "NO_COLOR_SELECTED"}) 
+    res.status(401).send( {message: "NO_COLOR_SELECTED"}) 
   } else if (color_code.length < 6) {
-      res.status(401).send( {message: "INVALID_COLOR"} )
+    res.status(401).send( {message: "INVALID_COLOR"} )
   };
 
-  con.query(`SELECT * FROM subjects WHERE user_id = ${user_id} AND name = "${subject_name}"`, function(err, result) {
-      if (err) {
-          console.log("ERROR Execution: ", err);
-          res.send("ERROR");
-          throw err;
-      }
-      console.log("result", result)
-      if (result != "") { 
-          res.status(401).send( {message: "SUBJECT_EXISTS"} )
-      } else {
-          const sql = `INSERT INTO subjects(user_id, name, color_code) VALUES (1, "${subject_name}", "${color_code}")`;
-          console.log(sql);
-          con.query(sql, function(err, result, fields) {
-              if(err) throw err;
-
-              db_index = result.insertId;
-              console.log(db_index);
-
-              const sub_sql = `SELECT id, name, color_code as colorCode FROM subjects WHERE id = ${db_index}`;
-              con.query(sub_sql, function (err, result, fields) {
-                  if (err) throw err;
-                  console.log(err);
-                  res.send(...result)
-              })
-          })
-      }
+  con.query(`SELECT * FROM subjects WHERE user_id = ${user_id} AND name = "${subject_name}"`, (err, result) => {
+  if (err) {
+      console.log("ERROR Execution: ", err);
+      res.send("ERROR");
+      throw err;
+    }
+    console.log('result', result);
+    if (result != '') { 
+      res.status(401).send( {message: 'SUBJECT_EXISTS'} );
+    } else {
+      const sql = `INSERT INTO subjects(user_id, name, color_code) VALUES (1, "${subject_name}", "${color_code}")`;
+      console.log(sql);
+      con.query(sql, (err, result, fields) => {
+        if(err) throw err;
+        const newLocal = db_index = result.insertId;
+        console.log(db_index);
+        const sub_sql = `SELECT id, name, color_code as colorCode FROM subjects WHERE id = ${db_index}`;
+        con.query(sub_sql, (err, result, fields) => {
+          if (err) throw err;
+          console.log(err);
+          res.send(...result);
+        });
+      });
+    }
   });
+});
 
 module.exports = router;

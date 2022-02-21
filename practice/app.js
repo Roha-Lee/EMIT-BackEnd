@@ -8,7 +8,7 @@ const dbconfig = require('./config/database');
 const todosRouter = require('./routes/todos');
 const statisticsRouter = require('./routes/statistics');
 const authRouter = require('./routes/auth');
-const pageRouter = require('./routes/page')
+const pageRouter = require('./routes/page');
 // const fs = require('fs');
 
 dotenv.config();
