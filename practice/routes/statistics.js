@@ -9,7 +9,7 @@ const dbconfig = require('../config/database');
 const router = express.Router();
 const connection = mysql.createConnection(dbconfig);
 
-router.put('/daily', async (req, res) => {
+router.get('/daily', async (req, res) => {
   // router.get('/daily', verifyToken, async (req, res) => {
     // const { userInfo } = req.decoded;
     const userInfo = {id: 1}
@@ -92,13 +92,22 @@ router.put('/period', async (req, res) => {
   // const { userInfo } = req.decoded;
   const userInfo = {id:1}
   let { startDate, endDate } = req.body;
+  const subjectTodo= {
+    '11' : [0.92 , "#a67ebf"],
+    'python' : [0.73,"#bf6d7f"],
+    'python1' : [0.82,"#6dbf84"],}
+  const subjectColorPair = {
+    '11': '#fa8072',
+    'python': '#db7093',
+    'python1': '#20b2aa',
+  }
   console.log(startDate, endDate)
   try {
-    const todoQuery = `SELECT s.name, s.color_code_id, t.is_done t.created_at
-      FROM todos AS t
-      JOIN subjects As s ON t.subject_id = s.id
-      WHERE t.created_at BETWEEN ${startDate} AND ${endDate}
-      AND s.user_id = ${userInfo.id}`;
+    // const todoQuery = `SELECT s.name, s.color_code_id, t.is_done, t.created_at
+    //   FROM todos AS t
+    //   JOIN subjects As s ON t.subject_id = s.id
+    //   WHERE t.created_at BETWEEN STR_TO_DATE("${startDate}", "%Y-%m-%d" AND STR_TO_DATE("${endDate}", "%Y-%m-%d"
+    //   AND s.user_id = ${parseInt(userInfo.id, 10)};`;
     const sql = `SELECT sd.subject_id, 
     sd.start_time, 
     sd.updated_at, 
@@ -110,16 +119,16 @@ router.put('/period', async (req, res) => {
     JOIN colors AS c
     ON c.id = s.color_code_id
     WHERE sd.user_id = ${parseInt(userInfo.id, 10)}
-    AND ((sd.start_time > STR_TO_DATE("${startDate}", "%Y-%m-%d") OR sd.start_time < STR_TO_DATE("${endDate}", "%Y-%m-%d"))
-    OR (sd.updated_at > STR_TO_DATE("${startDate}", "%Y-%m-%d") OR sd.updated_at < STR_TO_DATE("${endDate}", "%Y-%m-%d")));`;
+    AND ((sd.start_time > STR_TO_DATE("${startDate}", "%Y-%m-%d") AND sd.start_time < STR_TO_DATE("${endDate}", "%Y-%m-%d"))
+    OR (sd.updated_at > STR_TO_DATE("${startDate}", "%Y-%m-%d") AND sd.updated_at < STR_TO_DATE("${endDate}", "%Y-%m-%d")));`;
     startDate = new Date(`${req.body.startDate} GMT+0900`);
     endDate = new Date(new Date(`${req.body.endDate} GMT+0900`).setHours(24, 0, 0, 0));
-    // await connection.query(sql, async (err, row) => {
-    await connection.query(sql + todoQuery, async (err, row) => {
+    // await connection.query(sql + todoQuery, async (err, row) => {
+    await connection.query(sql, async (err, row) => {
       if (err) throw err;
-      // const subjectTotalTime = row.flatMap((item) => {
-      const subjectTotalTime = row[0].flatMap((item) => {
-        console.log(item)
+      const subjectTotalTime = row.flatMap((item) => {
+        // const subjectTotalTime = row[0].flatMap((item) => {
+        // console.log(item)
         let start = new Date(`${item.start_time} GMT+0900`);
         let end = new Date(`${item.updated_at} GMT+0900`);
         if (start < startDate) {
@@ -176,13 +185,14 @@ router.put('/period', async (req, res) => {
           return arr;
         }, []);
       const result = {};
+      // console.log(row[1])
       subjectTotalTime.forEach((date) => {
         date.forEach((subject) => {
           if (result[subject.key] === undefined) {
             result[subject.key] = {};
           }
           const time = new Date(subject.totalTime);
-          console.log(time)
+          // console.log(time)
           result[subject.key][subject.subjectName] = {
             color: `#${subject.color}`,
             totalTime: `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`,
@@ -190,21 +200,157 @@ router.put('/period', async (req, res) => {
         });
       });
       // console.log(result);
-      console.log(row[1])
-      const todo = {};
-      // for (let i = 0; i< row[1].length; i++) {
-
-      //   // const element = array[i];
-      // }
-      // todo[subject.name] = [
-      //   `#${subject.color}`,
-      //   subject.achievement,
-      // ]
-      return res.json({ subjectTotalTime: result });
+    //   console.log(row[1])
+    //   const todo = {};
+    //   for (let i = 0; i< row[1].length; i++) {
+    //     const item = row[1][i];
+    //     if todo{}
+    //     item.name
+    //   //   // const element = array[i];
+    //   }
+    //   todo[subject.name] = [
+    //     `#${subject.color}`,
+    //     subject.achievement,
+    //   ]
+      return res.json({ subjectColorPair, subjectTotalTime: result , subjectTodo});
     });
   } catch (error) {
     return res.json({ error });
   }
 });
+
+// router.get('/period', verifyToken, async (req, res) => {
+router.get('/period', async (req, res) => {
+  // const { userInfo } = req.decoded;
+  const userInfo = {id:1}
+  const { startDate, endDate } = req.body;
+  const ned = new Date(new Date(endDate).setHours(24, 0, 0, 0));
+  const nsd = new Date(startDate)
+  console.log(ned, nsd)
+  try {
+    const subjectQ = `SELECT s.name, c.code, t.is_done, t.content
+      FROM subjects AS s
+      JOIN colors AS c On s.color_code_id = c.id
+      JOIN todos AS t On s.id = t.subject_id
+      JOIN study_durations AS sd On sd.subject_id = s.id
+      WHERE s.user_id = ${parseInt(userInfo.id, 10)}
+      AND (sd.start_time BETWEEN 
+      str_to_date("${startDate}", "%Y-%m-%d") AND STR_TO_DATE("${endDate}", "%Y-%m-%d")
+      OR sd.updated_at BETWEEN str_to_date("${startDate}", "%Y-%m-%d") AND STR_TO_DATE("${endDate}", "%Y-%m-%d"));`;
+    const todoQ = `SELECT s.name, s.color_code_id, t.is_done, t.created_at
+      FROM todos AS t
+      JOIN subjects As s ON t.subject_id = s.id
+      WHERE s.user_id = ${parseInt(userInfo.id, 10)}
+      AND t.created_at BETWEEN STR_TO_DATE("${startDate}", "%Y-%m-%d") AND STR_TO_DATE("${endDate}", "%Y-%m-%d)");`;
+    const timeQ = `SELECT sd.subject_id, 
+      sd.start_time, 
+      sd.updated_at, 
+      s.name,
+      c.code 
+      FROM study_durations AS sd
+      JOIN subjects AS s 
+      ON sd.subject_id = s.id
+      JOIN colors AS c
+      ON c.id = s.color_code_id
+      WHERE sd.user_id = ${parseInt(userInfo.id, 10)}
+      AND ((sd.start_time > STR_TO_DATE("${startDate}", "%Y-%m-%d") AND sd.start_time < STR_TO_DATE("${endDate}", "%Y-%m-%d"))
+      OR (sd.updated_at > STR_TO_DATE("${startDate}", "%Y-%m-%d") AND sd.updated_at < STR_TO_DATE("${endDate}", "%Y-%m-%d")));`;
+    await connection.query(subjectQ + timeQ + todoQ, async (err, row) => {
+      if (err) throw err;
+      // console.log(row)
+      const subjectTotalTime = row[1].flatMap((item) => {
+        // console.log(item)
+
+
+
+ç
+
+        if (start < nsd) {
+          start = new Date(`${startDate.getFullYear()}-${startDate.getMonth() + 1}-${startDate.getDate()} GMT+0900`);
+        }
+        if (end > endDate) {
+          end = new Date(`${endDate.getFullYear()}-${endDate.getMonth() + 1}-${endDate.getDate()} GMT+0900`);
+        }
+        const dayEnd = `${(start.getFullYear())}-${(start.getMonth() + 1).toString().padStart(2, '0')}-${(start.getDate() + 1).toString().padStart(2, '0')}`;
+        const key = `${(start.getFullYear())}-${(start.getMonth() + 1).toString().padStart(2, '0')}-${(start.getDate()).toString().padStart(2, '0')}`;
+        if (end > new Date(dayEnd)) {
+          return [{
+            color: item.code,
+            subjectName: item.name,
+            subjectId: item.subject_id,
+            totalTime: new Date(`${dayEnd} GMT+0900`) - start,
+            key,
+          }, {
+            subjectId: item.subject_id,
+            subjectName: item.name,
+            color: item.code,
+            totalTime: end - new Date(`${dayEnd} GMT+0900`),
+            key: dayEnd,
+          },
+          ];
+        }
+        return [{
+          subjectId: item.subject_id,
+          subjectName: item.name,
+          color: item.code,
+          totalTime: end - start,
+          key,
+        }];
+      })
+        .reduce((prev, curr) => {
+          const arr = [...prev];
+          const idx = prev.findIndex(([elem]) => elem.key === curr.key);
+          const something = {
+            key: curr.key,
+            subjectName: curr.subjectName,
+            totalTime: curr.totalTime,
+            color: curr.color,
+          };
+          if (idx === -1) {
+            arr.push([something]);
+          } else {
+            const iidx = arr[idx].findIndex((elem) => elem.subjectName === curr.subjectName)
+            if (iidx === -1) {
+              arr[idx].push(something);
+            } else {
+              arr[idx][iidx].totalTime += curr.totalTime;
+            }
+          }
+          return arr;
+        }, []);
+      const result = {};
+      console.log(row[1])
+      subjectTotalTime.forEach((date) => {
+        date.forEach((subject) => {
+          if (result[subject.key] === undefined) {
+            result[subject.key] = {};
+          }
+          const time = new Date(subject.totalTime);
+          // console.log(time)
+          result[subject.key][subject.subjectName] = {
+            color: `#${subject.color}`,
+            totalTime: `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:${time.getSeconds().toString().padStart(2, '0')}`,
+          };
+        });
+      });
+      // console.log(result);
+      //   console.log(row[1])
+      //   const todo = {};
+      //   for (let i = 0; i< row[1].length; i++) {
+      //     const item = row[1][i];
+      //     if todo{}
+      //     item.name
+      //   //   // const element = array[i];
+      //   }
+      //   todo[subject.name] = [
+      //     `#${subject.color}`,
+      //     subject.achievement,
+      //   ]
+        return res.json({ subjectTotalTime: result });
+      });
+    } catch (error) {
+      return res.json({ error });
+    }
+  });
 
 module.exports = router;
