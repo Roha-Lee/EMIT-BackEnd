@@ -166,18 +166,28 @@ router.get('/period', verifyToken, async (req, res) => {
             result[subject.key] = {};
           }
           result[subject.key][subject.subjectName] = {
-            color: subject.color,
+            color: `#${subject.color}`,
             totalTime: subject.totalTime,
           };
         });
       });
-      // console.log(result);
+      console.log(result);
       // const todoQuery = `SELECT s.name, s.color_code_id, t.is_done t.created_at
       // FROM todos AS t
       // JOIN subjects As s ON t.subject_id = s.id
       // WHERE t.created_at BETWEEN ${startDate} AND ${endDate}`
-      // connection.query(todoQuery, 
-      //   )
+      // connection.query(todoQuery, async (err, row) => {
+      //   await console.log(row)
+      //   row.forEach(subject) => {
+      //     if (result[subject.date] === undefined) {
+      //       todoQuery[subject.date] = {}
+      //     }
+      //     todoQuery[subject.date] = {
+      //       color: subject.code
+      //     }
+      //     todoQuery()
+      //   }
+      // })
       return res.json({ subjectTotalTime: result });
     });
   } catch (error) {
