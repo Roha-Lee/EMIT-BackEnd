@@ -9,43 +9,6 @@ const dbconfig = require('../config/database');
 const router = express.Router();
 const connection = mysql.createConnection(dbconfig);
 
-const testRowData = [
-{
-  subject_id: 41,
-  start_time: new Date('2022-02-21T10:10:00.000Z'),
-  updated_at: new Date('2022-02-21T10:40:00.000Z'),
-  name: 'Javaaa',
-  code: 'dda0dd'
-},
-{
-  subject_id: 1,
-  start_time: new Date('2022-02-21T14:30:00.000Z'),
-  updated_at: new Date('2022-02-21T15:30:00.000Z'),
-  name: 'python',
-  code: 'db7093'
-},
-{
-  subject_id: 41,
-  start_time: new Date('2022-02-22T13:00:00.000Z'),
-  updated_at: new Date('2022-02-22T13:10:00.000Z'),
-  name: 'Javaaa',
-  code: 'dda0dd'
-},
-{
-  subject_id: 1,
-  start_time: new Date('2022-02-22T14:30:00.000Z'),
-  updated_at: new Date('2022-02-22T15:30:00.000Z'),
-  name: 'python',
-  code: 'db7093'
-},
-{
-  subject_id: 44,
-  start_time: new Date('2022-02-23T02:00:00.000Z'),
-  updated_at: new Date('2022-02-23T04:00:00.000Z'),
-  name: 'AIcheck',
-  code: '7da76c'
-},
-]
 
 // 다른 파일로 빼도 좋을 것 같습니다. 여기부터
 function dateToReturnFormat(date){
@@ -304,5 +267,42 @@ router.get('/period', async (req, res) => {
     return res.json({ error });
   }
 });
+
+router.get('/edit', (req, res) => {
+  const user_id = 1 /////
+  // const date = req.body.date
+  const date = "2022-02-21"
+  sql = `SELECT id, subject_id, start_time, updated_at FROM study_durations WHERE user_id = ${user_id} AND updated_at is NOT NULL
+  AND(DATE_FORMAT(updated_at, "%Y-%m-%d") = STR_TO_DATE("${date}", "%Y-%m-%d") OR DATE_FORMAT(start_time, "%Y-%m-%d") = STR_TO_DATE("${date}", "%Y-%m-%d"));`
+  con.query(sql, function(err, result) {
+      if(err) throw err;
+      return res.status(200).send({message: "SUCCESS", result: result})
+  })
+})
+
+router.patch('/:id', (req, res) => {
+  const user_id = 1;
+  const start_time = req.body.startTime;
+  const updated_at = req.body.endTime;
+  const id = req.params.id;
+  sql = `UPDATE study_durations SET start_time = "${start_time}", updated_at = "${updated_at}" WHERE id=${id} AND user_id = ${user_id};`
+  con.query(sql, (err, result) => {
+      if(err) throw err;
+      console.log(result, "*****")
+      return res.status(200).send({message: "SUCCESS"})
+  })
+})
+
+
+router.delete('/:id', (req, res) => {
+  const user_id = 1;
+  const id = req.params.id;
+  sql = `DELETE from study_durations WHERE id = ${id} AND user_id = ${user_id};`
+  con.query(sql, (err, result) => {
+      if(err) throw err;
+      return res.status(204).send()
+  })
+})
+
 
 module.exports = router;
