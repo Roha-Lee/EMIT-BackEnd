@@ -41,10 +41,46 @@ router.post('/signin', async (req, res, next) => {
           // console.log(User);
           const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '30d' });
           await connection.query(`UPDATE users SET token = "${accessToken}" WHERE username = "${User.username}";`);
-          // const refreshToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
           return res.cookie(
             'x_auth',
             { accessToken },
+            { maxAge: 31536000, path: '/', domain: 'localhost', sameSite: 'Lax', httpOnly: true },
+          ).json({ message: 'success', accessToken });
+        }
+      }
+    });
+  } catch (e) {
+    next();
+  }
+});
+
+router.post('/signinn', async (req, res, next) => {
+  // console.log(req.headers);
+  const { username, password } = req.body;
+  try {
+    // console.log(req.body.id);
+    await connection.query(`SELECT * FROM users WHERE username = "${username}";`, async (error, row) => {
+      if (error) throw error;
+      console.log(row);
+      const User = row.shift();
+      if (User === undefined) {
+        res.json({ message: 'Invalid id' });
+      } else {
+        const result = await bcrypt.compare(password, User.password);
+        if (!result) {
+          res.json({ message: 'Invalid password' });
+        } else {
+          const userInfo = {
+            id: User.id,
+            username: User.username,
+          };
+          // console.log(User);
+          const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '30d' });
+          const refreshToken = jwt.sign({}, process.env.JWT_SECRET_KEY, { expiresIn: '30d' });
+          await connection.query(`UPDATE users SET token = "${refreshToken}" WHERE username = "${User.username}";`);
+          return res.cookie(
+            'x_auth',
+            { accessToken, refreshToken },
             { maxAge: 31536000, path: '/', domain: 'localhost', sameSite: 'Lax', httpOnly: true },
           ).json({ message: 'success', accessToken });
         }
@@ -92,7 +128,7 @@ router.post('/signup', (req, res, next) => {
 
 router.get('/refresh', (req, res) => {
   try {
-    const headers = req.signedCookies.x_auth;
+    const {accessToken, refreshToken} = req.signedCookies.x_auth;
     // console.log(headers.fresh)
     // console.log(headers);
     try {

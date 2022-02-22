@@ -29,12 +29,12 @@ exports.isNotLoggedIn = (req, res, next) => {
 
 exports.verifyToken = (req, res, next) => {
   // console.log(req.headers);
-  console.log(req.cookies);
+  // console.log(req.cookies);
   try {
     // todo 쿼리로 db에서 token 꺼내오고, 비교해야 함
     // req.decoded = jwt.verify(req.cookies.x_auth.accessToken, process.env.JWT_SECRET_KEY);
     // req.decoded = jwt.verify(req.headers.authorization, process.env.JWT_SECRET_KEY);
-    req.decoded = jwt.verify(req.cookies.x_auth.accessToken, process.env.JWT_SECRET_KEY );
+    req.decoded = jwt.verify(req.cookies.x_auth.accessToken, process.env.JWT_SECRET_KEY);
     // console.log(req.fresh.cookies.x_auth.accessToken);
     // console.log(req.decoded);
     return next();
@@ -46,10 +46,8 @@ exports.verifyToken = (req, res, next) => {
       });
       // return res.redirect('/refresh');
     }
-    return res.status(401).json({
-      code: 401,
-      message: error,
-    });
+    return res.status(401).json({ code: 401, message: error }).redirect(,'/');
+    //권한없음
   }
 };
 
