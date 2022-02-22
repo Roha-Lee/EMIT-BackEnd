@@ -40,9 +40,11 @@ router.post('/', (req, res) => {
 
 // todo 이미 있는 내용은 추가로 생성하지 않게 해야할까? 같은 것이 들어가면 안되는 이유도 없으니 그냥 유저가 알아서 지우게 하는게 나을 듯
 
-router.patch('/:todoID', verifyToken, (req, res) => {
+// router.patch('/:todoID', verifyToken, (req, res) => {
+router.patch('/:todoID', (req, res) => {
   const { content, isDone } = req.body;
-  const { userInfo } = req.decoded;
+  // const { userInfo } = req.decoded;
+  const userInfo = {id:1};
   const { todoID } = req.params;
   // console.log(todoId)
   try {
@@ -52,7 +54,7 @@ router.patch('/:todoID', verifyToken, (req, res) => {
         res.json({ message: 'Invalid user' });
       } else {
         // const oldTodo = row.shift();
-        const updatesql = `UPDATE todos SET content = "${content}", is_done = ${parseInt(isDone, 10)} WHERE user_id = ${parseInt(userInfo.id, 10)} AND id = ${parseInt(todoID, 10)}`;
+        const updatesql = `UPDATE todos SET content = "${content}", is_done = ${parseInt(isDone===true ? 1 : 0, 10)} WHERE user_id = ${parseInt(userInfo.id, 10)} AND id = ${parseInt(todoID, 10)}`;
         try {
           connection.query(updatesql, (updateErr, result, fields) => {
             if (updateErr) throw updateErr;

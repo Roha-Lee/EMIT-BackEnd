@@ -1,150 +1,153 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
-const passport = require('passport');
 const mysql = require('mysql');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { ExtractJwt, Strategy: JWTStrategy } = require('passport-jwt');
-const { isLoggedIn, isNotLoggedIn } = require('./middleware');
-
-const JWTConfig = {
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.JWT_SECRET_KEY,
-};
 const dbconfig = require('../config/database');
 
-const connection = mysql.createConnection(dbconfig);
-// const users = require('../models/users');
-
 const router = express.Router();
-const JWTVerify = async (jwtPayload, done) => {
-  try {
-    // jwtPayload에 유저 정보가 담겨있다.
-		// 해당 정보로 유저 식별 로직을 거친다.
-    
-    // 유효한 유저라면
-    if (user) {
-      done(null, user);
-      return;
-    }
-    // 유저가 유효하지 않다면
-    done(null, false, { message: 'inaccurate token.' });
-  } catch (error) {
-    console.error(error);
-    done(error);
+const connection = mysql.createConnection(dbconfig);
+// const jwt = require('../modules/jwt');
+const { verifyToken } = require('./middleware');
+
+router.get('/signout', verifyToken, (req, res) => {
+  const { userInfo } = req.decoded;
+  if (!userInfo) {
+    res.status(200).json({ message: 'No user info' });
   }
-};
+  connection.query(`UPDATE users SET token = null WHERE username = "${userInfo.username}";`);
+  res.clearCookie('x_auth').json({ message: 'success' });
+});
 
-// passport.use('jwt', new JWTStrategy(JWTConfig, JWTVerify));
-
-router.post('/join', isNotLoggedIn, async (req, res, next) => {
-  const {
-    name, pw, nickname, email,
-  } = req.body;
+router.post('/signin', async (req, res, next) => {
+  console.log(req.headers);
+  const { username, password } = req.body;
   try {
-    const exUser = await connection.query(`SELECT id FROM users WHERE username = "${name}"`);
-    if (exUser) {
-      return res.json('User already exists');
-      // return res.redirect('/join?error=exist');
-    }
-    const hash = await bcrypt.hash(pw, 12);
-    await connection.query('INSERT INTO users (username, password, nickname, email) VALUES (?, ?, ?, ?)', [
-      name,
-      hash,
-      nickname,
-      email,
-    ]);
-    return res.json('Sign up success');
-    // return res.redirect('/');
+    // console.log(req.body.id);
+    await connection.query(`SELECT * FROM users WHERE username = "${username}";`, async (error, row) => {
+      if (error) throw error;
+      // console.log(row);
+      const User = row.shift();
+      if (User === undefined) {
+        res.json({ message: 'Invalid id' });
+      } else {
+        const result = await bcrypt.compare(password, User.password);
+        if (!result) {
+          res.json({ message: 'Invalid password' });
+        } else {
+          const userInfo = {
+            id: User.id,
+            username: User.username,
+          };
+          // console.log(User);
+          const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '30d' });
+          await connection.query(`UPDATE users SET token = "${accessToken}" WHERE username = "${User.username}";`);
+          // const refreshToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
+          return res.cookie(
+            'x_auth',
+            { accessToken },
+            { maxAge: 31536000, path: '/', domain: 'localhost', sameSite: 'Lax', httpOnly: true },
+          ).json({ message: 'success', accessToken });
+        }
+      }
+    });
+  } catch (e) {
+    next();
+  }
+});
+
+router.post('/signup', (req, res, next) => {
+  const {
+    username, password, nickname, email,
+  } = req.body;
+  const regExp = /^[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*.[a-zA-Z]{2,3}$/i;
+  if (!username) return res.json({ message: 'Empty IDfield' });
+  if (username.length > 16) return res.json({ message: 'Too long id' });
+  if (password.length < 4) return res.json({ message: 'Invalid password' });
+  if (!nickname) return res.json({ message: 'Empty nickname' });
+  if (!regExp.test(email)) return res.json({ message: 'Invalid email' });
+  try {
+    connection.query(`SELECT * FROM users WHERE username = "${username}"`, async (error, exUser) => {
+      if (error) throw (error);
+      if (!exUser) {
+        return res.json({ message: 'connection error' });
+      }
+      if (exUser.length !== 0) {
+        return res.json({ message: 'Existing user' });
+      }
+      const hashpw = await bcrypt.hash(password, 12);
+      console.log(req.body);
+      connection.query('INSERT INTO users (username, password, created_at, nickname, email) VALUES (?, ?, NOW(), ?, ?)', [
+        username,
+        hashpw,
+        nickname,
+        email,
+      ]);
+      return res.json({ message: 'success' });
+    });
   } catch (error) {
-    console.error(error);
+    // console.error(error);
     return next(error);
   }
 });
 
-router.post('/login', isNotLoggedIn, (req, res, next) => {
-  passport.authenticate('local', (authError, user, info) => {
-    if (authError) {
-      console.error(authError);
-      return next(authError); // 서버에러
-    }
-    if (!user) {
-      return res.json(info); // 로그인 실패
-      // return res.redirect(`/?loginError=${info.message}`);
-    }
-    return req.login(user, (loginError) => { // 로그인에 성공 -> passportindex로
-      if (loginError) {
-        console.error(loginError);
-        return next(loginError);
+router.get('/refresh', (req, res) => {
+  try {
+    const headers = req.signedCookies.x_auth;
+    // console.log(headers.fresh)
+    // console.log(headers);
+    try {
+      const oldToken = jwt.verify(headers.accessToken, process.env.JWT_SECRET_KEY);
+      // console.log(oldToken);
+      res.redirect('/main');
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        const refreshToken = jwt.verify(headers.refreshToken, process.env.JWT_SECRET_KEY);
+        // console.log(refreshToken.userInfo.username)
+        connection.query(`SELECT id, username FROM users WHERE username = "${refreshToken.userInfo.username}"`, (error, row) => {
+          const User = row.shift();
+          // console.log(User);
+          if (User.username === refreshToken.userInfo.username) {
+            const userInfo = {
+              id: User.id,
+              username: User.username,
+            };
+            const freshRefreshToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' });
+            const accessToken = jwt.sign({ userInfo }, process.env.JWT_SECRET_KEY, { expiresIn: '3d' });
+            res.cookie('x_auth', { accessToken, freshRefreshToken }, { signed: true }).redirect('/main');
+          }
+        });
       }
-      // 세션 쿠키가 생성되어 브라우저에 저장.
-      // const token = jwt.sign(user, process.env.JWT_SECRET_KEY);
-      // return res.json(token);
-      return res.json('Login success');
-      // return res.redirect('/'); // 로그인 성공
-    });
-  })(req, res, next);
+    }
+  } catch (error) {
+    // console.log(error)
+    res.json({ message: 'fail to get cookies', error });
+  }
 });
 
-router.get('/logout', isLoggedIn, (req, res) => {
-  req.logout();
-  req.session.destroy();
-  res.redirect('/');
-});
-
-
-// app.get('/logout', verifyToken, (req, res) => {
-//   req.logOut();
-//   req.session.destroy();
-//   res.redirect('/');
-// });
-// app.get('/refreshToken', verifyToken, (req, res) => {
-//   if (req.headers.authorization && req.headers.refresh) {
-//     const authToken = req.headers.authorization.split('Bearer ')[1];
-//     const refreshToken = req.headers.refresh;
-//     // access token 검증 -> expired여야 함.
-//     const authResult = jwt.verifyToken(authToken);
-//     // access token 디코딩하여 user의 정보를 가져옵니다.
-//     const decoded = jwt.decode(authToken);
-//     // 디코딩 결과가 없으면 권한이 없음을 응답.
-//     if (decoded === null) {
-//       res.status(401).send({
-//         ok: false,
-//         message: 'No authorized!',
-//       });
-//     }
-//     /* access token의 decoding 된 값에서
-//       유저의 id를 가져와 refresh token을 검증합니다. */
-//     const refreshResult = jwt.verifyToken(refreshToken, decoded.id);
-//     // 재발급을 위해서는 access token이 만료되어 있어야합니다.
-//     if (authResult.ok === false && authResult.message === 'jwt expired') {
-//       // 1. access token이 만료되고, refresh token도 만료 된 경우 => 새로 로그인해야합니다.
-//       if (refreshResult.ok === false) {
-//         res.status(401).send({
-//           ok: false,
-//           message: 'No authorized!',
-//         });
+// router.post('/signin', async (req, res) => {
+//   const { username, password } = req.body;
+//   try {
+//     // console.log(req.body.id);
+//     await connection.query(`SELECT * FROM users WHERE username = "${username}";`, async (error, row) => {
+//       if (error) throw error;
+//       // console.log(row);
+//       const User = row.shift();
+//       if (User === undefined) {
+//         res.json({ message: 'Invalid id' });
 //       } else {
-//         // 2. access token이 만료되고, refresh token은 만료되지 않은 경우 => 새로운 access token을 발급
-//         const newAccessToken = sign(user);
-//         res.status(200).send({ // 새로 발급한 access token과 원래 있던 refresh token 모두 클라이언트에게 반환합니다.
-//           ok: true,
-//           data: {
-//             accessToken: newAccessToken,
-//             refreshToken,
-//           },
-//         });
+//         const result = await bcrypt.compare(password, User.password);
+//         if (!result) {
+//           res.json({ message: 'Invalid password' });
+//         } else {
+//           const jwtToken = jwt.sign(User);
+//           await connection.query(`INSERT INTO users (token) VALUES (${jwtToken.refreshToken});`);
+//           res.status(200).json({ statusCode: 200, message: 'success', token: (await jwtToken).accessToken });
+//         }
 //       }
-//     } else {
-//       // 3. access token이 만료되지 않은경우 => refresh 할 필요가 없습니다.
-//       res.status(400).send({
-//         ok: false,
-//         message: 'Acess token is not expired!',
-//       });
-//     }
-//   } else { // access token 또는 refresh token이 헤더에 없는 경우
-//     res.status(400).send({
-//       ok: false,
-//       message: 'Access token and refresh token are need for refresh!',
 //     });
+//   } catch (e) {
+//     res.json({ message: 'failed to login' });
 //   }
 // });
+
+module.exports = router;
